@@ -1,18 +1,30 @@
 # Entangle-Python [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-wasd
+Did you ever think syncing variables between two processes (anywhere in the world) is difficult?
+Entangle-Python is your solution.
+It enables you to entangle two variables across processes.
+One needs to launch an entanglement server and one an entanglement client.
+You can connect entanglements even cross programming language.
+
+You can see the documentation below or simply look at some examples.
+
+A python server and client in one script can be found [here](https://github.com/penguinmenac3/entangle-python/blob/master/example.py).
+If you want only a server to which for example [entangle-js](https://github.com/penguinmenac3/entangle-js) can connect to, check out [this script](https://github.com/penguinmenac3/entangle-python/blob/master/example_server.py).
 
 ## Install
 
-Simply pip install from the github repo.
+Simply pip install the package.
 
 ```bash
 pip install entangle-python
 ```
+
 ## Usage
 
 ### Entanglement Server
 
+Listen for entanglement requests and handle them.
+Inside the callback you can do whatever you want, it is a new thread and does not hinder new entanglements from happening.
 Note that an entanglement object corresponds to a client.
 
 ```python
@@ -33,6 +45,8 @@ entangle.listen(host="localhost", port=12345, password="42", callback=on_entangl
 ### Entanglement Client
 
 If your script wants to connect to an entanglement server use the following.
+The connect function connects asynchronously to a server.
+Once an entanglement is established your callback gets called.
 
 ```python
 import entangle
@@ -41,6 +55,6 @@ def on_entangle(entanglement):
   entanglement.remote_fun("rprint")("Hello Universe!")
   entanglement.close()
 
-# asyncronously connect to a client (entanglement spawns a daemon thread)
+# asynchronously connect to a client (entanglement spawns a daemon thread)
 entangle.connect(host="localhost", port=12345, password="42", callback=on_entangle)
 ```
