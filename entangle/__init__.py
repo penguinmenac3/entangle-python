@@ -1,2 +1,2 @@
-from client import connect, connect_blocking
-from server import listen
+from entangle.client import connect, connect_blocking
+from entangle.server import listen
