@@ -43,6 +43,7 @@ def listen(host, port, password=None, callback=None, users=None):
                     auth = payload.decode("utf-8").split(" ")
                     receivedHash = None
                     receivedSalt = None
+                    receivedUser = None
                     saltedPW = None
                     if users is not None:
                         receivedUser = auth[0]
@@ -56,6 +57,7 @@ def listen(host, port, password=None, callback=None, users=None):
                         saltedPW = password + receivedSalt
                     if saltedPW is not None and hashlib.sha256(saltedPW.encode("utf-8")).hexdigest() == receivedHash:
                         self.authenticated = True
+                        self.entanglement.username = receivedUser
                         if callback is not None:
                             self.thread = Thread(target=callback, args=(self.entanglement,))
                             self.thread.setDaemon(True)
