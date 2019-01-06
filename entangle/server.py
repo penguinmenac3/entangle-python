@@ -10,13 +10,19 @@ from threading import Thread
 from entangle.entanglement import Entanglement
 
 
-def listen(host, port, password, callback):
+def listen(host, port, password=None, callback=None, users=None):
     """
     Listen for entanglements.
 
     You should set EntanglementProtocol.callback to receive the entanglements.
     Further it is recommended to set EntanglementProtocol.password to have a password protection.
     """
+    if password is None and users is None:
+        raise RuntimeError("You must provide a password or a dict mapping usernames to passwords.")
+
+    if callback is None:
+        raise RuntimeError("A callback is required.")
+
     class EntanglementServerProtocol(WebSocketServerProtocol):
         def close_entanglement(self):
             self.closedByMe = True
@@ -35,11 +41,21 @@ def listen(host, port, password, callback):
             if not isBinary:
                 if not self.authenticated:
                     auth = payload.decode("utf-8").split(" ")
-                    receivedHash = auth[0]
-                    receivedSalt = auth[1]
-                    saltedPW = password + receivedSalt
+                    receivedHash = None
+                    receivedSalt = None
+                    saltedPW = None
+                    if users is not None:
+                        receivedUser = auth[0]
+                        receivedHash = auth[1]
+                        receivedSalt = auth[2]
+                        if receivedUser in users:
+                            saltedPW = users[receivedUser] + receivedSalt
+                    else:
+                        receivedHash = auth[0]
+                        receivedSalt = auth[1]
+                        saltedPW = password + receivedSalt
                     computedHash = hashlib.sha256(saltedPW.encode("utf-8")).hexdigest()
-                    if computedHash == receivedHash:
+                    if computedHash == receivedHash and saltedPW is not None:
                         self.authenticated = True
                         if callback is not None:
                             self.thread = Thread(target=callback, args=(self.entanglement,))
