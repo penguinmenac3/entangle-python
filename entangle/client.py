@@ -66,6 +66,9 @@ def __create_client(host, port, password, callback):
             self.sendMessage(json.dumps(result).encode("utf-8"), False)
 
         def onClose(self, wasClean, code, reason):
+            on_close = getattr(self.entanglement, "on_close", None)
+            if callable(on_close):
+                on_close()
             print("Entanglement closed: {}".format(reason))
             sys.stdout.flush()
             reactor.stop()
