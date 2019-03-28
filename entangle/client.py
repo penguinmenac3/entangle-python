@@ -6,12 +6,14 @@ import json
 import hashlib
 import sys
 import bcrypt
-from threading import Thread
+import warnings
+import time
+from threading import Thread, Condition
 
 from entangle.entanglement import Entanglement
 
 
-def __create_client(host, port, password, callback):
+def create_client(host, port, password, callback, fail, user=None):
     class EntanglementClientProtocol(WebSocketClientProtocol):
         def close_entanglement(self):
             self.closedByMe = True
@@ -21,10 +23,13 @@ def __create_client(host, port, password, callback):
             print("Entanglement created: {}".format(request.peer))
             sys.stdout.flush()
             self.entanglement = Entanglement(self)
-            salt = bcrypt.gensalt()
+            salt = bcrypt.gensalt().decode("utf-8")
             saltedPW = password + salt
             computedHash = hashlib.sha256(saltedPW.encode("utf-8")).hexdigest()
-            self.sendMessage("{} {}".format(computedHash, salt).encode("utf-8"), False)
+            if user is None:
+                self.sendMessage("{} {}".format(computedHash, salt).encode("utf-8"), False)
+            else:
+                self.sendMessage("{} {} {}".format(user, computedHash, salt).encode("utf-8"), False)
             if callback is not None:
                 self.thread = Thread(target=callback, args=(self.entanglement,))
                 self.thread.setDaemon(True)
@@ -66,6 +71,7 @@ def __create_client(host, port, password, callback):
             self.sendMessage(json.dumps(result).encode("utf-8"), False)
 
         def onClose(self, wasClean, code, reason):
+            fail()
             on_close = getattr(self.entanglement, "on_close", None)
             if callable(on_close):
                 on_close()
@@ -80,12 +86,64 @@ def __create_client(host, port, password, callback):
     reactor.connectTCP(host, port, factory)
     reactor.run()
 
+class Client(object):
+    def __init__(self, host, port, password, user=None, callback=None, blocking=False):
+        self._entanglement = None
+        self._failed = False
+        self.thread = None
+        self.condition = Condition()
+        self.callback = callback
+        if blocking:
+            create_client(host, port, password, self.__on_entangle, self.__on_fail, user)
+        else:
+            self.thread = Thread(target=create_client, args=(host, port, password, self.__on_entangle, self.__on_fail, user))
+            self.thread.setDaemon(True)
+            self.thread.start()
 
-def connect(host, port, password, callback):
-    thread = Thread(target=__create_client, args=(host, port, password, callback))
-    thread.setDaemon(True)
-    thread.start()
+    def __on_entangle(self, entanglement):
+        self._entanglement = entanglement
+        self._entanglement.join = self.join
+        self.condition.acquire()
+        self.condition.notify()
+        self.condition.release()
+        if self.callback is not None:
+            self.callback(entanglement)
+
+    def __on_fail(self):
+        self._entanglement = None
+        self._failed = True
+        self.condition.acquire()
+        self.condition.notify()
+        self.condition.release()
+
+    def get_entanglement(self):
+        self.condition.acquire()
+        while self._entanglement is None and not self._failed:
+            self.condition.wait()
+        self.condition.release()
+        return self._entanglement
+
+    def join(self):
+        if self.thread is not None:
+            self.thread.join()
+            self.thread = None
+
+
+def connect(host, port, password, callback=None, user=None):
+    if callback is not None:
+        warnings.simplefilter('always', DeprecationWarning)  # turn off filter
+        warnings.warn("Do not use callback parameter with this method. Either use Client(...) or connect without callback param. The entanglement will be returned.",
+                    category=DeprecationWarning,
+                    stacklevel=2)
+        warnings.simplefilter('default', DeprecationWarning)
+    c = Client(host, port, password, callback=callback, user=user)
+    return c.get_entanglement()
 
 
 def connect_blocking(host, port, password, callback):
-    __create_client(host, port, password, callback)
+    warnings.simplefilter('always', DeprecationWarning)  # turn off filter
+    warnings.warn("Call to deprecated function connect_blocking(...). Use Client(...) or connect(...) instead.",
+                category=DeprecationWarning,
+                stacklevel=2)
+    warnings.simplefilter('default', DeprecationWarning)
+    Client(host, port, password, callback=callback, blocking=True)

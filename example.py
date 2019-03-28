@@ -18,16 +18,17 @@ if sys.argv[1] == "server":
         entanglement.shutdown = shutdown
 
     # Listen for entanglements (listenes in blocking mode)
-    entangle.listen(host="localhost", port=12345, password="42", callback=on_entangle)
+    entangle.listen(host="localhost", port=24454, password="42", callback=on_entangle)
 else:
-    def on_entangle(entanglement):
-        entanglement.remote_fun("rprint")("Hello Universe!")
+    # connect to a client (network listener spawns a daemon thread)
+    entanglement = entangle.connect(host="localhost", port=24454, password="42")
 
-        def done_rprint():
-            print(entanglement.test)
-            entanglement.remote_fun("shutdown")()
-
-        entanglement.done_rprint = done_rprint
-
-    # asyncronously connect to a client (entanglement spawns a daemon thread)
-    entangle.connect_blocking(host="localhost", port=12345, password="42", callback=on_entangle)
+    # do something with the entanglement
+    def done_rprint():
+        print(entanglement.test)
+        entanglement.remote_fun("shutdown")()
+    entanglement.done_rprint = done_rprint
+    entanglement.remote_fun("rprint")("Hello Universe!")
+    
+    # Wait until the connection is dropped
+    entanglement.join()
