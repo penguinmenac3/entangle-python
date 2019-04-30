@@ -1,3 +1,5 @@
+from threading import Condition
+
 class Entanglement(object):
     """
     An entanglement entangles two objects on different machines via the network.
@@ -11,9 +13,11 @@ class Entanglement(object):
     """
     def __init__(self, protocol):
         self.__protocol = protocol
+        self.__condition = Condition()
 
     def __setattr__(self, name, value):
         super(Entanglement, self).__setattr__(name, value)
+        self._notify(name, value, write=False)
         if not callable(value) and not name.startswith("_"):
             self.__protocol.update_variable(name, value)
 
@@ -24,3 +28,21 @@ class Entanglement(object):
 
     def close(self):
         self.__protocol.close_entanglement()
+
+    def get(self, variablename):
+        """
+        Waits with returning until the value is not none.
+        """
+        self.__condition.acquire()
+        while self.__dict__[variablename] is None:
+            self.__condition.wait()
+        self.__condition.release()
+
+        return self.__dict__[variablename]
+
+    def _notify(self, variablename, value, write=True):
+        if write:
+            self.__dict__[variablename] = value
+        self.__condition.acquire()
+        self.__condition.notify()
+        self.__condition.release()

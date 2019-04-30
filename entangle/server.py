@@ -70,7 +70,7 @@ def listen(host, port, password=None, callback=None, users=None):
                         print(packet["error"])
                         sys.stdout.flush()
                     elif "variable" in packet:
-                        self.entanglement.__dict__[packet["variable"]["name"]] = packet["variable"]["value"]
+                        self.entanglement._notify(packet["variable"]["name"], packet["variable"]["value"])
                     elif "call" in packet:
                         call_packet = packet["call"]
                         try:
