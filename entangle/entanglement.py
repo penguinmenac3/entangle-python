@@ -17,7 +17,8 @@ class Entanglement(object):
 
     def __setattr__(self, name, value):
         super(Entanglement, self).__setattr__(name, value)
-        self._notify(name, value, write=False)
+        if not name.startswith("_"):
+            self._notify(name, value, write=False)
         if not callable(value) and not name.startswith("_"):
             self.__protocol.update_variable(name, value)
 
@@ -34,7 +35,7 @@ class Entanglement(object):
         Waits with returning until the value is not none.
         """
         self.__condition.acquire()
-        while self.__dict__[variablename] is None:
+        while variablename not in self.__dict__ or self.__dict__[variablename] is None:
             self.__condition.wait()
         self.__condition.release()
 
