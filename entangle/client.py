@@ -13,14 +13,13 @@ from threading import Thread, Condition
 from entangle.entanglement import Entanglement
 
 
-def create_client(host, port, password, callback, fail, user=None):
+def create_client(host, port, password, callback, fail, user=None, non_main=False):
     class EntanglementClientProtocol(WebSocketClientProtocol):
         def close_entanglement(self):
             self.closedByMe = True
             self.sendClose()
 
         def onConnect(self, request):
-            print("Entanglement created: {}".format(request.peer))
             sys.stdout.flush()
             self.entanglement = Entanglement(self)
             salt = bcrypt.gensalt().decode("utf-8")
@@ -75,7 +74,6 @@ def create_client(host, port, password, callback, fail, user=None):
             on_close = getattr(self.entanglement, "on_close", None)
             if callable(on_close):
                 on_close()
-            print("Entanglement closed: {}".format(reason))
             sys.stdout.flush()
             reactor.stop()
 
@@ -84,7 +82,10 @@ def create_client(host, port, password, callback, fail, user=None):
     factory.protocol = EntanglementClientProtocol
 
     reactor.connectTCP(host, port, factory)
-    reactor.run()
+    if non_main:
+        reactor.run(installSignalHandlers=False)
+    else:
+        reactor.run()
 
 class Client(object):
     def __init__(self, host, port, password, user=None, callback=None, blocking=False):
@@ -96,7 +97,7 @@ class Client(object):
         if blocking:
             create_client(host, port, password, self.__on_entangle, self.__on_fail, user)
         else:
-            self.thread = Thread(target=create_client, args=(host, port, password, self.__on_entangle, self.__on_fail, user))
+            self.thread = Thread(target=create_client, args=(host, port, password, self.__on_entangle, self.__on_fail, user, True))
             self.thread.setDaemon(True)
             self.thread.start()
 

@@ -29,8 +29,6 @@ def listen(host, port, password=None, callback=None, users=None):
             self.sendClose()
 
         def onConnect(self, request):
-            print("Creating Entanglement: {}".format(request.peer))
-            sys.stdout.flush()
             self.entanglement = Entanglement(self)
             self.authenticated = False
 
@@ -58,8 +56,6 @@ def listen(host, port, password=None, callback=None, users=None):
                     if saltedPW is not None and hashlib.sha256(saltedPW.encode("utf-8")).hexdigest() == receivedHash:
                         self.authenticated = True
                         self.entanglement.username = receivedUser
-                        print("Entanglement authenticated: {}".format(receivedUser))
-                        sys.stdout.flush()
                         if callback is not None:
                             self.thread = Thread(target=callback, args=(self.entanglement,))
                             self.thread.setDaemon(True)
@@ -98,8 +94,6 @@ def listen(host, port, password=None, callback=None, users=None):
             self.sendMessage(json.dumps(result).encode("utf-8"), False)
 
         def onClose(self, wasClean, code, reason):
-            print("Entanglement closed: {}".format(reason))
-            sys.stdout.flush()
             if self.entanglement is not None:
                 on_close = getattr(self.entanglement, "on_close", None)
                 if callable(on_close):
