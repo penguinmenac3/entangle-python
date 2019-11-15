@@ -104,6 +104,7 @@ class Client(object):
     def __on_entangle(self, entanglement):
         self._entanglement = entanglement
         self._entanglement.join = self.join
+        self._entanglement.is_alive = self.is_alive
         self.condition.acquire()
         self.condition.notify()
         self.condition.release()
@@ -128,6 +129,12 @@ class Client(object):
         if self.thread is not None:
             self.thread.join()
             self.thread = None
+
+    def is_alive(self):
+        if self.thread is not None:
+            return self.thread.is_alive()
+        else:
+            return False
 
 
 def connect(host, port, password, callback=None, user=None):
