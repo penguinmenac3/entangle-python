@@ -1,6 +1,7 @@
 import entangle
 import sys
 
+
 if sys.argv[1] == "server":
     # Define a callback for every new entanglement
     def on_entangle(entanglement):
@@ -18,10 +19,10 @@ if sys.argv[1] == "server":
         entanglement.shutdown = shutdown
 
     # Listen for entanglements (listenes in blocking mode)
-    entangle.listen(host="localhost", port=24454, password="42", callback=on_entangle)
+    entangle.listen(host="localhost", port=24454, password="42", callback=on_entangle, ssl_root="certs")
 else:
     # connect to a client (network listener spawns a daemon thread)
-    entanglement = entangle.connect(host="localhost", port=24454, password="42")
+    entanglement = entangle.connect(host="localhost", port=24454, password="42", use_ssl=True)
 
     # do something with the entanglement
     def done_rprint():

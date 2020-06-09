@@ -1,16 +1,20 @@
 #!/usr/bin/python
+import os
 
 from autobahn.twisted.websocket import WebSocketServerProtocol, WebSocketServerFactory
 from twisted.internet import reactor
+import ssl
 import json
 import hashlib
 import sys
 from threading import Thread
 
+from twisted.internet.ssl import DefaultOpenSSLContextFactory
+
 from entangle.entanglement import Entanglement
 
 
-def listen(host, port, password=None, callback=None, users=None):
+def listen(host, port, password=None, callback=None, users=None, ssl_root=None):
     """
     Listen for entanglements.
 
@@ -99,11 +103,28 @@ def listen(host, port, password=None, callback=None, users=None):
                 if callable(on_close):
                     on_close()
 
-    factory = WebSocketServerFactory(u"ws://" + host + ":" + str(port))
-    factory.protocol = EntanglementServerProtocol
-    # factory.setProtocolOptions(maxConnections=2)
+    if ssl_root is None:
+        factory = WebSocketServerFactory(u"ws://" + host + ":" + str(port))
+        factory.protocol = EntanglementServerProtocol
 
-    reactor.listenTCP(port, factory)
+        print("WARN: NO SSL!")
+        reactor.listenTCP(port, factory)
+    else:
+        factory = WebSocketServerFactory(u"wss://" + host + ":" + str(port))
+        factory.protocol = EntanglementServerProtocol
+
+        keyfile = ssl_root+"/key.pem"
+        certfile = ssl_root + "/cert.pem"
+        if not os.path.exists(keyfile):
+            print("Cannot find key: {}".format(keyfile))
+            return
+        if not os.path.exists(certfile):
+            print("Cannot find cert: {}".format(certfile))
+            return
+        print("SSL: ok.")
+        ctxFactory = DefaultOpenSSLContextFactory(privateKeyFileName=keyfile, certificateFileName=certfile)
+        # factory.setProtocolOptions(maxConnections=2)
+        reactor.listenSSL(port, factory, ctxFactory)
     reactor.run()
 
 

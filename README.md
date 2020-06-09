@@ -19,6 +19,22 @@ Simply pip install the package.
 pip install entangle-python
 ```
 
+### Creating an SSL Certificate
+
+SSL Certificates are required for SSL encryption (this is optional but highly recommended).
+
+Create a folder where your certs should live and create a password with or without a password.
+
+```bash
+mkdir certs
+cd certs
+
+# with password (secure)
+openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365
+# or without passwort (insecure)
+#openssl req -x509 -nodes -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365
+```
+
 ## Usage
 
 ### Entanglement Server
@@ -39,7 +55,7 @@ def on_entangle(entanglement):
     entanglement.rprint = rprint
 
 # Listen for entanglements (listenes in blocking mode)
-entangle.listen(host="localhost", port=12345, password="42", callback=on_entangle)
+entangle.listen(host="localhost", port=12345, password="42", callback=on_entangle, ssl_root="certs")
 ```
 
 ### Entanglement Client
@@ -56,5 +72,5 @@ def on_entangle(entanglement):
   entanglement.close()
 
 # asynchronously connect to a client (entanglement spawns a daemon thread)
-entangle.connect(host="localhost", port=12345, password="42", callback=on_entangle)
+entangle.connect(host="localhost", port=12345, password="42", callback=on_entangle, use_ssl=True)
 ```

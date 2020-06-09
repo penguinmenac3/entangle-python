@@ -2,18 +2,20 @@
 
 from autobahn.twisted.websocket import WebSocketClientProtocol, WebSocketClientFactory
 from twisted.internet import reactor
+from twisted.internet.ssl import ClientContextFactory
 import json
 import hashlib
 import sys
 import bcrypt
 import warnings
+import ssl
 import time
 from threading import Thread, Condition
 
 from entangle.entanglement import Entanglement
 
 
-def create_client(host, port, password, callback, fail, user=None, non_main=False):
+def create_client(host, port, password, callback, fail, user=None, non_main=False, use_ssl=False):
     class EntanglementClientProtocol(WebSocketClientProtocol):
         def close_entanglement(self):
             self.closedByMe = True
@@ -78,26 +80,30 @@ def create_client(host, port, password, callback, fail, user=None, non_main=Fals
             reactor.stop()
 
     # Use the protocol to create a connection
-    factory = WebSocketClientFactory(u"ws://" + host + ":" + str(port))
-    factory.protocol = EntanglementClientProtocol
-
-    reactor.connectTCP(host, port, factory)
+    if not use_ssl:
+        factory = WebSocketClientFactory(u"ws://" + host + ":" + str(port))
+        factory.protocol = EntanglementClientProtocol
+        reactor.connectTCP(host, port, factory)
+    else:
+        factory = WebSocketClientFactory(u"wss://" + host + ":" + str(port))
+        factory.protocol = EntanglementClientProtocol
+        reactor.connectSSL(host, port, factory, ClientContextFactory())
     if non_main:
         reactor.run(installSignalHandlers=False)
     else:
         reactor.run()
 
 class Client(object):
-    def __init__(self, host, port, password, user=None, callback=None, blocking=False):
+    def __init__(self, host, port, password, user=None, callback=None, blocking=False, use_ssl=False):
         self._entanglement = None
         self._failed = False
         self.thread = None
         self.condition = Condition()
         self.callback = callback
         if blocking:
-            create_client(host, port, password, self.__on_entangle, self.__on_fail, user)
+            create_client(host, port, password, self.__on_entangle, self.__on_fail, user, use_ssl=use_ssl)
         else:
-            self.thread = Thread(target=create_client, args=(host, port, password, self.__on_entangle, self.__on_fail, user, True))
+            self.thread = Thread(target=create_client, args=(host, port, password, self.__on_entangle, self.__on_fail, user, True, use_ssl))
             self.thread.setDaemon(True)
             self.thread.start()
 
@@ -137,21 +143,21 @@ class Client(object):
             return False
 
 
-def connect(host, port, password, callback=None, user=None):
+def connect(host, port, password, callback=None, user=None, use_ssl=False):
     if callback is not None:
         warnings.simplefilter('always', DeprecationWarning)  # turn off filter
         warnings.warn("Do not use callback parameter with this method. Either use Client(...) or connect without callback param. The entanglement will be returned.",
                     category=DeprecationWarning,
                     stacklevel=2)
         warnings.simplefilter('default', DeprecationWarning)
-    c = Client(host, port, password, callback=callback, user=user)
+    c = Client(host, port, password, callback=callback, user=user, use_ssl=use_ssl)
     return c.get_entanglement()
 
 
-def connect_blocking(host, port, password, callback):
+def connect_blocking(host, port, password, callback, use_ssl=False):
     warnings.simplefilter('always', DeprecationWarning)  # turn off filter
     warnings.warn("Call to deprecated function connect_blocking(...). Use Client(...) or connect(...) instead.",
                 category=DeprecationWarning,
                 stacklevel=2)
     warnings.simplefilter('default', DeprecationWarning)
-    Client(host, port, password, callback=callback, blocking=True)
+    Client(host, port, password, callback=callback, blocking=True, use_ssl=use_ssl)
