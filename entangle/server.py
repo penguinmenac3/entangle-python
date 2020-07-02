@@ -7,6 +7,7 @@ import ssl
 import json
 import hashlib
 import sys
+import traceback
 from threading import Thread
 
 from twisted.internet.ssl import DefaultOpenSSLContextFactory
@@ -81,7 +82,8 @@ def listen(host, port, password=None, callback=None, users=None, ssl_root=None):
                             kwargs = call_packet["kwargs"]
                             fun(*args, **kwargs)
                         except:
-                            errormsg = "Error when invoking {} on entanglement with args {} and kwargs {}.".format(call_packet["name"], call_packet["args"], call_packet["kwargs"])
+                            error = traceback.format_exc()
+                            errormsg = "Error when invoking {} on entanglement with args {} and kwargs {}.\n{}".format(call_packet["name"], call_packet["args"], call_packet["kwargs"], error)
                             print(errormsg)
                             sys.stdout.flush()
                             result = {"error": errormsg}

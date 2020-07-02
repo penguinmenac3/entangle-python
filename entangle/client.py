@@ -15,7 +15,7 @@ from threading import Thread, Condition
 from entangle.entanglement import Entanglement
 
 
-def create_client(host, port, password, callback, fail, user=None, non_main=False, use_ssl=False):
+def create_client(host, port, password, callback, fail, user=None, non_main=False, use_ssl=False, run_reactor=True):
     class EntanglementClientProtocol(WebSocketClientProtocol):
         def close_entanglement(self):
             self.closedByMe = True
@@ -88,22 +88,23 @@ def create_client(host, port, password, callback, fail, user=None, non_main=Fals
         factory = WebSocketClientFactory(u"wss://" + host + ":" + str(port))
         factory.protocol = EntanglementClientProtocol
         reactor.connectSSL(host, port, factory, ClientContextFactory())
-    if non_main:
-        reactor.run(installSignalHandlers=False)
-    else:
-        reactor.run()
+    if run_reactor:
+        if non_main:
+            reactor.run(installSignalHandlers=False)
+        else:
+            reactor.run()
 
 class Client(object):
-    def __init__(self, host, port, password, user=None, callback=None, blocking=False, use_ssl=False):
+    def __init__(self, host, port, password, user=None, callback=None, blocking=False, use_ssl=False, run_reactor=True):
         self._entanglement = None
         self._failed = False
         self.thread = None
         self.condition = Condition()
         self.callback = callback
         if blocking:
-            create_client(host, port, password, self.__on_entangle, self.__on_fail, user, use_ssl=use_ssl)
+            create_client(host, port, password, self.__on_entangle, self.__on_fail, user, use_ssl=use_ssl, run_reactor=run_reactor)
         else:
-            self.thread = Thread(target=create_client, args=(host, port, password, self.__on_entangle, self.__on_fail, user, True, use_ssl))
+            self.thread = Thread(target=create_client, args=(host, port, password, self.__on_entangle, self.__on_fail, user, True, use_ssl, run_reactor))
             self.thread.setDaemon(True)
             self.thread.start()
 
