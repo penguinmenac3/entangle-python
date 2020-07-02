@@ -55,7 +55,8 @@ def create_client(host, port, password, callback, fail, user=None, non_main=Fals
                         kwargs = call_packet["kwargs"]
                         fun(*args, **kwargs)
                     except:
-                        errormsg = "Error when invoking {} on entanglement with args {} and kwargs {}.".format(call_packet["name"], call_packet["args"], call_packet["kwargs"])
+                        error = traceback.format_exc()
+                        errormsg = "Error when invoking {} on entanglement with args {} and kwargs {}.\n{}".format(call_packet["name"], call_packet["args"], call_packet["kwargs"], error)
                         print(errormsg)
                         sys.stdout.flush()
                         result = {"error": errormsg}
