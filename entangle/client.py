@@ -10,6 +10,7 @@ import bcrypt
 import warnings
 import ssl
 import time
+import traceback
 from threading import Thread, Condition
 
 from entangle.entanglement import Entanglement
