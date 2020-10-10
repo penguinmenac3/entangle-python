@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 from codecs import open
 from os import path
 
-__version__ = '20201010'
+__version__ = '20201010.2'
 
 here = path.abspath(path.dirname(__file__))
 
@@ -21,7 +21,7 @@ setup(
     name='entangle-python',
     version=__version__,
     description='Create an entanglement across network and even programming language.',
-    long_description=long_description,
+    long_description="see github",
     url='https://github.com/penguinmenac3/entangle-python',
     download_url='https://github.com/penguinmenac3/entangle-python/tarball/' + __version__,
     license='BSD',
